@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShopPanel — Panel Sklepu (Ja & Patryk)</title>
+  <meta name="description" content="Nowoczesny panel zarządzania sklepem – magazyn, finanse, podział zysku 50/50 i notatnik dla wspólników." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== FULLSCREEN LOGIN GATEWAY ===== -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-glow-bg"></div>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-logo-icon">🛒</div>
+      <h2 class="login-logo-title">ShopPanel</h2>
+      <span class="login-badge">Panel Wspólników 50/50</span>
+    </div>
+
+    <!-- Step 1: Wybór profilu -->
+    <div id="login-step-profiles">
+      <h3 class="login-heading">Wybierz swój profil</h3>
+      <p class="login-subheading">Kto korzysta dzisiaj z panelu sklepu?</p>
+
+      <div class="login-profiles-grid">
+        <div class="login-profile-card profile-ja" onclick="selectLoginProfile('ja')">
+          <div class="login-avatar-ring">
+            <div class="login-avatar avatar-ja">JA</div>
+          </div>
+          <h4 class="login-profile-name">Ja</h4>
+          <span class="login-profile-role">Wspólnik 1 (50%)</span>
+          <div class="login-profile-status"><span class="pulse-dot"></span> Dostępny</div>
+          <button class="btn btn-profile-select">Zaloguj jako Ja →</button>
+        </div>
+
+        <div class="login-profile-card profile-patryk" onclick="selectLoginProfile('patryk')">
+          <div class="login-avatar-ring">
+            <div class="login-avatar avatar-patryk">PA</div>
+          </div>
+          <h4 class="login-profile-name">Patryk</h4>
+          <span class="login-profile-role">Wspólnik 2 (50%)</span>
+          <div class="login-profile-status"><span class="pulse-dot"></span> Dostępny</div>
+          <button class="btn btn-profile-select">Zaloguj jako Patryk →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Wprowadzenie PIN -->
+    <div id="login-step-pin" style="display: none;">
+      <div class="pin-user-banner">
+        <button class="pin-back-btn" onclick="backToProfiles()" title="Powrót do wyboru profilu">← Zmień profil</button>
+        <div class="pin-user-info">
+          <div class="pin-avatar" id="pin-display-avatar">JA</div>
+          <div>
+            <div class="pin-username" id="pin-display-name">Ja</div>
+            <div class="pin-userrole" id="pin-display-role">Wspólnik (50%)</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="pin-prompt">Podaj 4-cyfrowy kod PIN</p>
+
+      <div class="pin-dots-container" id="pin-dots">
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+        <span class="pin-dot"></span>
+      </div>
+
+      <div class="pin-error-msg" id="pin-error-msg"></div>
+
+      <!-- Klawiatura numeryczna -->
+      <div class="pin-keypad">
+        <button class="keypad-btn" type="button" onclick="pressPin('1')">1</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('2')">2</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('3')">3</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('4')">4</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('5')">5</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('6')">6</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('7')">7</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('8')">8</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('9')">9</button>
+        <button class="keypad-btn keypad-cmd" type="button" onclick="clearPin()">C</button>
+        <button class="keypad-btn" type="button" onclick="pressPin('0')">0</button>
+        <button class="keypad-btn keypad-cmd keypad-back" type="button" onclick="deletePin()">⌫</button>
+      </div>
+
+      <div class="pin-quick-login">
+        <span>💡 Domyślny PIN: <strong>1234</strong></span>
+        <button class="btn btn-sm btn-ghost" type="button" onclick="quickLogin()">Szybkie logowanie (1234) ⚡</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon-wrap">🛒</div>
+    <div class="logo-text-group">
+      <span class="logo-text">ShopPanel</span>
+      <span class="logo-sub">Ja & Patryk · 50/50</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <button class="nav-btn active" data-tab="dashboard" onclick="showTab('dashboard', this)">
+      <span class="nav-icon">📊</span><span>Dashboard</span>
+    </button>
+    <button class="nav-btn" data-tab="magazyn" onclick="showTab('magazyn', this)">
+      <span class="nav-icon">📦</span><span>Magazyn</span>
+    </button>
+    <button class="nav-btn" data-tab="sprzedaz" onclick="showTab('sprzedaz', this)">
+      <span class="nav-icon">💳</span><span>Sprzedaż</span>
+    </button>
+    <button class="nav-btn" data-tab="finanse" onclick="showTab('finanse', this)">
+      <span class="nav-icon">💰</span><span>Finanse</span>
+    </button>
+    <button class="nav-btn" data-tab="podzial" onclick="showTab('podzial', this)">
+      <span class="nav-icon">🤝</span><span>Podział Zysku</span>
+    </button>
+    <button class="nav-btn" data-tab="inwestycje" onclick="showTab('inwestycje', this)">
+      <span class="nav-icon">📈</span><span>Inwestycje</span>
+    </button>
+    <button class="nav-btn" data-tab="notatnik" onclick="showTab('notatnik', this)">
+      <span class="nav-icon">📝</span><span>Notatnik</span>
+      <span class="nav-badge" id="notes-badge">0</span>
+    </button>
+    <button class="nav-btn" data-tab="historia" onclick="showTab('historia', this)">
+      <span class="nav-icon">📋</span><span>Historia</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <!-- Active User Card -->
+    <div class="current-user-pill" onclick="openUserSwitchModal()" title="Kliknij, aby zmienić użytkownika lub się wylogować">
+      <div class="user-avatar-wrap">
+        <div class="partner-avatar user-avatar-current" id="sidebar-user-avatar">JA</div>
+        <span class="user-online-dot"></span>
+      </div>
+      <div class="user-pill-info">
+        <div class="user-pill-name" id="sidebar-user-name">Ja</div>
+        <div class="user-pill-status">Zalogowany · <span class="link-switch">Zmień ⇄</span></div>
+      </div>
+    </div>
+
+    <!-- Partners 50/50 info -->
+    <div class="partners-card">
+      <div class="partner-avatar avatar-ja" title="Ja (50%)">JA</div>
+      <div class="partner-avatar avatar-patryk" title="Patryk (50%)">PA</div>
+      <span class="partners-label">Wspólnicy 50/50</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="main-content">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-toggle" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+      <div>
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+        <span class="page-subtitle" id="page-subtitle">Przegląd wyników i podsumowanie sklepu</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="date-badge">📅 <span id="current-date"></span></div>
+
+      <!-- User Badge in Topbar -->
+      <div class="topbar-user-badge" onclick="openUserSwitchModal()" title="Zmień użytkownika">
+        <div class="topbar-user-avatar" id="topbar-avatar">JA</div>
+        <div class="topbar-user-meta">
+          <span class="topbar-user-name" id="topbar-user-name">Ja</span>
+          <span class="topbar-user-tag">Zmień ⇄</span>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary-subtle" onclick="openNoteModal()">+ Nowa notatka</button>
+      <button class="btn btn-primary" onclick="openModal('add-sale-modal')">+ Dodaj sprzedaż</button>
+    </div>
+  </header>
+
+  <!-- ===== TAB: DASHBOARD ===== -->
+  <section class="tab-content active" id="tab-dashboard">
+    <div class="stats-grid">
+      <div class="stat-card gradient-green">
+        <div class="stat-icon-wrap">💵</div>
+        <div class="stat-info">
+          <div class="stat-label">Łączny przychód</div>
+          <div class="stat-value" id="stat-revenue">0 zł</div>
+          <div class="stat-sub" id="stat-revenue-month">Przychód ze sprzedaży</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-blue">
+        <div class="stat-icon-wrap">📈</div>
+        <div class="stat-info">
+          <div class="stat-label">Czysty zysk</div>
+          <div class="stat-value" id="stat-profit">0 zł</div>
+          <div class="stat-sub" id="stat-margin">Marża: 0%</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-orange">
+        <div class="stat-icon-wrap">📦</div>
+        <div class="stat-info">
+          <div class="stat-label">Produkty w magazynie</div>
+          <div class="stat-value" id="stat-products">0 szt.</div>
+          <div class="stat-sub" id="stat-low-stock">Brak alertów</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-purple">
+        <div class="stat-icon-wrap">🤝</div>
+        <div class="stat-info">
+          <div class="stat-label" id="stat-share-label">Działka na osobę (50%)</div>
+          <div class="stat-value" id="stat-share">0 zł</div>
+          <div class="stat-sub">Dla każdego wspólnika</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card chart-card">
+        <div class="card-header">
+          <div>
+            <h2>Przychody i zysk — ostatnie 7 dni</h2>
+            <span class="card-sub">Dynamika sprzedaży dzień po dniu</span>
+          </div>
+        </div>
+        <canvas id="revenue-chart" width="600" height="200"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>🔴 Niski stan magazynu</h2>
+            <span class="card-sub">Produkty wymagające domówienia</span>
+          </div>
+        </div>
+        <div id="low-stock-list" class="low-stock-list">
+          <p class="empty-state">Wszystko w porządku! ✅</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>📦 Ostatnie sprzedaże</h2>
+            <span class="card-sub">Rejestrowane transakcje wspólników</span>
+          </div>
+          <button class="btn btn-sm btn-ghost" onclick="showTab('sprzedaz', document.querySelector('[data-tab=sprzedaz]'))">Wszystkie →</button>
+        </div>
+        <div id="recent-sales-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h2>💡 Podsumowanie finansowe</h2>
+            <span class="card-sub">Bilans zysków, kosztów i wypłat</span>
+          </div>
+        </div>
+        <div class="finance-summary" id="finance-summary">
+          <div class="fin-row"><span>Przychód brutto</span><strong id="fs-revenue">0 zł</strong></div>
+          <div class="fin-row"><span>Koszt zakupu towaru (COGS)</span><strong id="fs-cost">0 zł</strong></div>
+          <div class="fin-row"><span>Koszty operacyjne</span><strong id="fs-expenses">0 zł</strong></div>
+          <div class="fin-row highlight"><span>Zysk netto</span><strong id="fs-net">0 zł</strong></div>
+          <div class="fin-row"><span>Wypłacono łącznie</span><strong id="fs-paid">0 zł</strong></div>
+          <div class="fin-row highlight-green"><span>Pozostało do podziału</span><strong id="fs-remaining">0 zł</strong></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TAB: MAGAZYN ===== -->
+  <section class="tab-content" id="tab-magazyn">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="product-search" placeholder="🔍 Szukaj produktu..." oninput="filterProducts()" />
+      </div>
+      <select class="select-input" id="category-filter" onchange="filterProducts()">
+        <option value="">Wszystkie kategorie</option>
+      </select>
+      <button class="btn btn-primary" onclick="openModal('add-product-modal')">+ Dodaj produkt</button>
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table class="data-table" id="products-table">
+          <thead>
+            <tr>
+              <th>Produkt</th>
+              <th>Kategoria</th>
+              <th>Ilość (szt.)</th>
+              <th>Cena zakupu</th>
+              <th>Cena sprzedaży</th>
+              <th>Marża</th>
+              <th>Status</th>
+              <th>Akcje</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
+      </div>
+      <p class="empty-state" id="products-empty">Brak produktów. Dodaj pierwszy produkt! 📦</p>
+    </div>
+  </section>
+
+  <!-- ===== TAB: SPRZEDAŻ ===== -->
+  <section class="tab-content" id="tab-sprzedaz">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="sale-search" placeholder="🔍 Szukaj sprzedaży..." oninput="filterSales()" />
+      </div>
+      <input type="month" class="select-input" id="sale-month-filter" onchange="filterSales()" />
+      <button class="btn btn-primary" onclick="openModal('add-sale-modal')">+ Nowa sprzedaż</button>
+    </div>
+    <div class="card">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Produkt</th>
+              <th>Ilość</th>
+              <th>Cena jedn.</th>
+              <th>Przychód</th>
+              <th>Zysk</th>
+              <th>Sprzedał</th>
+              <th>Akcje</th>
+            </tr>
+          </thead>
+          <tbody id="sales-tbody"></tbody>
+        </table>
+      </div>
+      <p class="empty-state" id="sales-empty">Brak sprzedaży. Dodaj pierwszą transakcję! 💳</p>
+    </div>
+  </section>
+
+  <!-- ===== TAB: FINANSE ===== -->
+  <section class="tab-content" id="tab-finanse">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openModal('add-expense-modal')">+ Dodaj koszt</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card gradient-green">
+        <div class="stat-icon-wrap">💵</div>
+        <div class="stat-info">
+          <div class="stat-label">Łączny przychód</div>
+          <div class="stat-value" id="fin-revenue">0 zł</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-red">
+        <div class="stat-icon-wrap">🛍️</div>
+        <div class="stat-info">
+          <div class="stat-label">Koszt towaru</div>
+          <div class="stat-value" id="fin-cogs">0 zł</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-orange">
+        <div class="stat-icon-wrap">📝</div>
+        <div class="stat-info">
+          <div class="stat-label">Koszty operacyjne</div>
+          <div class="stat-value" id="fin-expenses">0 zł</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-blue">
+        <div class="stat-icon-wrap">✅</div>
+        <div class="stat-info">
+          <div class="stat-label">Zysk netto</div>
+          <div class="stat-value" id="fin-net">0 zł</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2>📝 Koszty operacyjne</h2>
+          <span class="card-sub">Wydatki bieżące: reklamy, opakowania, narzędzia</span>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr><th>Data</th><th>Opis</th><th>Kategoria</th><th>Kwota</th><th>Akcje</th></tr>
+          </thead>
+          <tbody id="expenses-tbody"></tbody>
+        </table>
+      </div>
+      <p class="empty-state" id="expenses-empty">Brak kosztów. Dodaj pierwszy wydatek.</p>
+    </div>
+  </section>
+
+  <!-- ===== TAB: PODZIAŁ ZYSKU ===== -->
+  <section class="tab-content" id="tab-podzial">
+    <div class="podzial-grid">
+      <!-- Partner 1: Ja -->
+      <div class="card podzial-card" id="podzial-card-ja">
+        <div class="partner-header">
+          <div class="partner-big-avatar avatar-ja">JA</div>
+          <div class="partner-meta">
+            <div class="partner-name-row">
+              <h2 id="partner1-name-display">Ja (Wspólnik 1)</h2>
+              <span class="active-badge" id="badge-active-ja" style="display:none;">Twój profil ⭐</span>
+            </div>
+            <span class="badge badge-purple">50% udziałów</span>
+          </div>
+        </div>
+        <div class="partner-stats">
+          <div class="fin-row"><span>Zysk brutto (50%)</span><strong id="p1-gross">0 zł</strong></div>
+          <div class="fin-row"><span>Wypłacono</span><strong id="p1-paid">0 zł</strong></div>
+          <div class="fin-row highlight-green"><span>Do wypłaty</span><strong id="p1-remaining">0 zł</strong></div>
+        </div>
+        <div class="partner-card-footer">
+          <button class="btn btn-primary" style="width:100%" onclick="openPayoutModal(0)">💸 Zarejestruj wypłatę dla: Ja</button>
+        </div>
+      </div>
+
+      <!-- Partner 2: Patryk -->
+      <div class="card podzial-card" id="podzial-card-patryk">
+        <div class="partner-header">
+          <div class="partner-big-avatar avatar-patryk">PA</div>
+          <div class="partner-meta">
+            <div class="partner-name-row">
+              <h2 id="partner2-name-display">Patryk (Wspólnik 2)</h2>
+              <span class="active-badge" id="badge-active-patryk" style="display:none;">Twój profil ⭐</span>
+            </div>
+            <span class="badge badge-orange">50% udziałów</span>
+          </div>
+        </div>
+        <div class="partner-stats">
+          <div class="fin-row"><span>Zysk brutto (50%)</span><strong id="p2-gross">0 zł</strong></div>
+          <div class="fin-row"><span>Wypłacono</span><strong id="p2-paid">0 zł</strong></div>
+          <div class="fin-row highlight-green"><span>Do wypłaty</span><strong id="p2-remaining">0 zł</strong></div>
+        </div>
+        <div class="partner-card-footer">
+          <button class="btn btn-secondary" style="width:100%" onclick="openPayoutModal(1)">💸 Zarejestruj wypłatę dla: Patryk</button>
+        </div>
+      </div>
+
+      <!-- Payouts History -->
+      <div class="card" style="grid-column: 1/-1;">
+        <div class="card-header">
+          <div>
+            <h2>📋 Historia wypłat wspólników</h2>
+            <span class="card-sub">Rejestr pobranych zaliczek i rozliczeń</span>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead><tr><th>Data</th><th>Wspólnik</th><th>Kwota</th><th>Notatka</th></tr></thead>
+            <tbody id="payouts-tbody"></tbody>
+          </table>
+        </div>
+        <p class="empty-state" id="payouts-empty">Brak wypłat.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TAB: INWESTYCJE ===== -->
+  <section class="tab-content" id="tab-inwestycje">
+    <div class="toolbar">
+      <button class="btn btn-primary" onclick="openModal('add-investment-modal')">+ Nowa inwestycja</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card gradient-blue">
+        <div class="stat-icon-wrap">🏦</div>
+        <div class="stat-info">
+          <div class="stat-label">Łączne inwestycje</div>
+          <div class="stat-value" id="inv-total">0 zł</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-green">
+        <div class="stat-icon-wrap">💹</div>
+        <div class="stat-info">
+          <div class="stat-label">Zwrot z inwestycji</div>
+          <div class="stat-value" id="inv-return">0 zł</div>
+        </div>
+      </div>
+      <div class="stat-card gradient-purple">
+        <div class="stat-icon-wrap">⏳</div>
+        <div class="stat-info">
+          <div class="stat-label">W toku</div>
+          <div class="stat-value" id="inv-active">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2>📈 Lista inwestycji</h2>
+          <span class="card-sub">Środki przeznaczone na rozwój sklepu i towar</span>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr><th>Data</th><th>Nazwa</th><th>Kwota</th><th>Cel</th><th>Status</th><th>Zwrot</th><th>Akcje</th></tr>
+          </thead>
+          <tbody id="investments-tbody"></tbody>
+        </table>
+      </div>
+      <p class="empty-state" id="investments-empty">Brak inwestycji. Zaplanuj pierwszy krok!</p>
+    </div>
+  </section>
+
+  <!-- ===== TAB: NOTATNIK ===== -->
+  <section class="tab-content" id="tab-notatnik">
+    <div class="toolbar notes-toolbar">
+      <div class="search-wrap">
+        <input type="text" class="search-input" id="note-search" placeholder="🔍 Szukaj w notatkach i zadaniach..." oninput="filterNotes()" />
+      </div>
+      <select class="select-input" id="note-category-filter" onchange="filterNotes()">
+        <option value="">Wszystkie kategorie</option>
+        <option value="Do zrobienia">📋 Do zrobienia (To-Do)</option>
+        <option value="Ważne">⚠️ Ważne</option>
+        <option value="Magazyn">📦 Magazyn & Towar</option>
+        <option value="Pomysły">💡 Pomysły</option>
+        <option value="Finanse">💰 Finanse</option>
+        <option value="Ustalenia">🤝 Ustalenia</option>
+        <option value="Ogólne">📝 Ogólne</option>
+      </select>
+      <select class="select-input" id="note-author-filter" onchange="filterNotes()">
+        <option value="">Wszyscy autorzy</option>
+        <option value="Ja">Tylko Ja</option>
+        <option value="Patryk">Tylko Patryk</option>
+      </select>
+      <select class="select-input" id="note-sort-filter" onchange="filterNotes()">
+        <option value="pinned">Przypięte na górze</option>
+        <option value="newest">Od najnowszych</option>
+        <option value="oldest">Od najstarszych</option>
+      </select>
+      <button class="btn btn-primary" onclick="openNoteModal()">+ Nowa notatka</button>
+    </div>
+
+    <!-- Notes Grid -->
+    <div class="notes-grid" id="notes-grid"></div>
+    <div class="empty-state" id="notes-empty" style="display:none;">
+      <div class="empty-icon-lg">📝</div>
+      <h3>Brak notatek</h3>
+      <p>Dodaj pierwszą wspólną notatkę, listę zadań lub pomysł dla Ciebie i Patryka!</p>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="openNoteModal()">+ Dodaj pierwszą notatkę</button>
+    </div>
+  </section>
+
+  <!-- ===== TAB: HISTORIA ===== -->
+  <section class="tab-content" id="tab-historia">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2>📋 Pełna historia zdarzeń sklepu</h2>
+          <span class="card-sub">Automatyczny audyt sprzedaży, magazynu i notatek</span>
+        </div>
+      </div>
+      <div id="history-list" class="history-list"></div>
+      <p class="empty-state" id="history-empty">Brak historii.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Add / Edit Note Modal -->
+<div class="modal-overlay" id="note-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <h3 id="note-modal-title">📝 Nowa notatka</h3>
+      <button class="modal-close" onclick="closeModal('note-modal')" aria-label="Zamknij">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="n-id" />
+      <div class="form-group">
+        <label>Tytuł notatki *</label>
+        <input type="text" id="n-title" class="form-input" placeholder="np. Zamówienie kartonów i etykiet kurierskich" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kategoria</label>
+          <select id="n-category" class="form-input">
+            <option value="Do zrobienia">📋 Do zrobienia (To-Do)</option>
+            <option value="Ważne">⚠️ Ważne</option>
+            <option value="Magazyn">📦 Magazyn & Towar</option>
+            <option value="Pomysły">💡 Pomysły</option>
+            <option value="Finanse">💰 Finanse</option>
+            <option value="Ustalenia">🤝 Ustalenia</option>
+            <option value="Ogólne">📝 Ogólne</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Kolor karty</label>
+          <select id="n-color" class="form-input">
+            <option value="indigo">🟣 Fioletowy / Indygo</option>
+            <option value="emerald">🟢 Szmaragdowy (Sukces)</option>
+            <option value="amber">🟡 Bursztynowy (Uwaga)</option>
+            <option value="rose">🔴 Karmazynowy (Ważne)</option>
+            <option value="cyan">🔵 Błękitny</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Autor notatki</label>
+          <select id="n-author" class="form-input">
+            <option value="Ja">Ja</option>
+            <option value="Patryk">Patryk</option>
+          </select>
+        </div>
+        <div class="form-group" style="justify-content: flex-end; padding-bottom: 6px;">
+          <label class="checkbox-toggle">
+            <input type="checkbox" id="n-pinned" />
+            <span class="toggle-track"></span>
+            <span class="toggle-label">📌 Przypnij notatkę na górze</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="textarea-header">
+          <label>Treść notatki</label>
+          <span class="hint-tag">Wskazówka: zacznij linię od <strong>[ ]</strong> lub <strong>[x]</strong>, aby dodać pole do odhaczenia!</span>
+        </div>
+        <textarea id="n-content" class="form-input form-textarea" rows="7" placeholder="Treść notatki...&#10;&#10;Przykład listy zadań do odhaczenia:&#10;[x] Sprawdzenie stanu magazynowego&#10;[ ] Przygotowanie paczek dla kuriera&#10;[ ] Domówienie taśmy klejącej"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('note-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="saveNote()">Zapisz notatkę</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Switch / Profile Modal -->
+<div class="modal-overlay" id="user-switch-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>👤 Profil użytkownika</h3>
+      <button class="modal-close" onclick="closeModal('user-switch-modal')" aria-label="Zamknij">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="user-switch-card">
+        <div class="partner-big-avatar" id="switch-modal-avatar">JA</div>
+        <div>
+          <h3 id="switch-modal-name">Ja</h3>
+          <span class="badge badge-purple" id="switch-modal-role">Wspólnik 1 (50%)</span>
+          <p class="user-active-sub">Aktywna sesja w przeglądarce</p>
+        </div>
+      </div>
+
+      <div class="user-switch-actions">
+        <label class="section-sublabel">Szybkie przełączanie wspólnika:</label>
+        <button class="btn btn-secondary" style="width:100%; justify-content:center;" id="btn-toggle-partner" onclick="quickSwitchPartner()">
+          ⇄ Przełącz na profil: Patryk
+        </button>
+        <button class="btn btn-ghost btn-danger-ghost" style="width:100%; justify-content:center; margin-top:8px;" onclick="logoutUser()">
+          🔒 Wyloguj i zablokuj panel PIN-em
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="add-product-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📦 Dodaj produkt do magazynu</h3>
+      <button class="modal-close" onclick="closeModal('add-product-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nazwa produktu *</label>
+        <input type="text" id="p-name" class="form-input" placeholder="np. Słuchawki Bezprzewodowe Pro" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kategoria</label>
+          <input type="text" id="p-category" class="form-input" placeholder="np. Elektronika" />
+        </div>
+        <div class="form-group">
+          <label>Ilość (szt.) *</label>
+          <input type="number" id="p-qty" class="form-input" placeholder="0" min="0" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Cena zakupu (zł) *</label>
+          <input type="number" id="p-buy" class="form-input" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Cena sprzedaży (zł) *</label>
+          <input type="number" id="p-sell" class="form-input" placeholder="0.00" min="0" step="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Alert niskiego stanu (szt.)</label>
+        <input type="number" id="p-alert" class="form-input" placeholder="5" min="0" value="5" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-product-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="addProduct()">Dodaj produkt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Sale Modal -->
+<div class="modal-overlay" id="add-sale-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💳 Dodaj sprzedaż</h3>
+      <button class="modal-close" onclick="closeModal('add-sale-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Produkt *</label>
+        <select id="s-product" class="form-input" onchange="fillSalePrice()">
+          <option value="">-- Wybierz produkt --</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ilość *</label>
+          <input type="number" id="s-qty" class="form-input" placeholder="1" min="1" value="1" oninput="calcSaleTotal()" />
+        </div>
+        <div class="form-group">
+          <label>Cena sprzedaży (zł/szt.) *</label>
+          <input type="number" id="s-price" class="form-input" placeholder="0.00" min="0" step="0.01" oninput="calcSaleTotal()" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="s-date" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>Sprzedał</label>
+          <select id="s-seller" class="form-input">
+            <option value="Ja">Ja</option>
+            <option value="Patryk">Patryk</option>
+          </select>
+        </div>
+      </div>
+      <div class="sale-summary">
+        <div class="fin-row"><span>Przychód:</span><strong id="sale-total-preview">0 zł</strong></div>
+        <div class="fin-row"><span>Zysk brutto:</span><strong id="sale-profit-preview">0 zł</strong></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-sale-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="addSale()">Zapisz sprzedaż</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal-overlay" id="add-expense-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📝 Dodaj koszt operacyjny</h3>
+      <button class="modal-close" onclick="closeModal('add-expense-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Opis wydatku *</label>
+        <input type="text" id="e-desc" class="form-input" placeholder="np. Kampania Meta Ads, paczka kartonów..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kategoria</label>
+          <select id="e-category" class="form-input">
+            <option value="Marketing">Marketing</option>
+            <option value="Transport">Transport</option>
+            <option value="Opakowania">Opakowania</option>
+            <option value="Oprogramowanie">Oprogramowanie</option>
+            <option value="Inne">Inne</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Kwota (zł) *</label>
+          <input type="number" id="e-amount" class="form-input" placeholder="0.00" min="0" step="0.01" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="e-date" class="form-input" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-expense-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="addExpense()">Dodaj koszt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Investment Modal -->
+<div class="modal-overlay" id="add-investment-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📈 Dodaj inwestycję</h3>
+      <button class="modal-close" onclick="closeModal('add-investment-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nazwa inwestycji *</label>
+        <input type="text" id="i-name" class="form-input" placeholder="np. Partia Power Banków 30szt." />
+      </div>
+      <div class="form-group">
+        <label>Cel inwestycji</label>
+        <input type="text" id="i-goal" class="form-input" placeholder="np. Zwiększenie oferty i marży" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kwota (zł) *</label>
+          <input type="number" id="i-amount" class="form-input" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="i-date" class="form-input" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-investment-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="addInvestment()">Dodaj inwestycję</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payout Modal -->
+<div class="modal-overlay" id="payout-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>💸 Zarejestruj wypłatę dla wspólnika</h3>
+      <button class="modal-close" onclick="closeModal('payout-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Wspólnik</label>
+        <input type="text" id="payout-partner-name" class="form-input" readonly style="opacity:0.8;font-weight:600;" />
+        <input type="hidden" id="payout-partner-idx" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kwota wypłaty (zł) *</label>
+          <input type="number" id="payout-amount" class="form-input" placeholder="0.00" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="payout-date" class="form-input" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notatka</label>
+        <input type="text" id="payout-note" class="form-input" placeholder="np. Zaliczka na konto / rozliczenie miesiąca" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('payout-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="addPayout()">Zapisz wypłatę</button>
+    </div>
+  </div>
+</div>
+
+<!-- Investment Return Modal -->
+<div class="modal-overlay" id="inv-return-modal">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <h3>💹 Zaznacz zwrot inwestycji</h3>
+      <button class="modal-close" onclick="closeModal('inv-return-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="inv-return-idx" />
+      <div class="form-group">
+        <label>Osiągnięty zwrot (zł)</label>
+        <input type="number" id="inv-return-amount" class="form-input" placeholder="0.00" min="0" step="0.01" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('inv-return-modal')">Anuluj</button>
+      <button class="btn btn-primary" onclick="markInvestmentReturn()">Zatwierdź zwrot</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
