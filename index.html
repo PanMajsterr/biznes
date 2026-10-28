@@ -407,6 +407,42 @@
 
   <!-- ===== TAB: PODZIAŁ ZYSKU ===== -->
   <section class="tab-content" id="tab-podzial">
+    <!-- Statystyki podziału zysku 50/50 -->
+    <div class="stats-grid" style="margin-bottom:24px;">
+      <div class="stat-card gradient-blue">
+        <div class="stat-icon">💰</div>
+        <div class="stat-info">
+          <span class="stat-label">Czysty zysk do podziału</span>
+          <span class="stat-value" id="split-total-net">0,00 zł</span>
+          <span class="stat-sub">Po odliczeniu kosztów i COGS</span>
+        </div>
+      </div>
+      <div class="stat-card gradient-green">
+        <div class="stat-icon">🤝</div>
+        <div class="stat-info">
+          <span class="stat-label">Udział na wspólnika (50%)</span>
+          <span class="stat-value" id="split-partner-share">0,00 zł</span>
+          <span class="stat-sub">Równy podział 50/50</span>
+        </div>
+      </div>
+      <div class="stat-card gradient-orange">
+        <div class="stat-icon">💸</div>
+        <div class="stat-info">
+          <span class="stat-label">Wypłacono łącznie</span>
+          <span class="stat-value" id="split-total-paid">0,00 zł</span>
+          <span class="stat-sub" id="split-payouts-count">0 wypłat</span>
+        </div>
+      </div>
+      <div class="stat-card gradient-purple">
+        <div class="stat-icon">🏦</div>
+        <div class="stat-info">
+          <span class="stat-label">Pozostało w kasie sklepu</span>
+          <span class="stat-value" id="split-remaining">0,00 zł</span>
+          <span class="stat-sub">Dostępne środki do wypłaty</span>
+        </div>
+      </div>
+    </div>
+
     <div class="card" style="margin-bottom:20px;">
       <div class="card-header">
         <div>

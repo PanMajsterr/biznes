@@ -1,50 +1,97 @@
 # 🛒 ShopPanel — Panel Zarządzania Sklepem (Ja & Patryk)
 
-Nowoczesny, responsywny panel zarządzania sklepem dla dwóch wspólników (50/50). Umożliwia pełną kontrolę nad magazynem, finansami, sprzedażą, inwestycjami oraz wspólnymi notatkami.
+Nowoczesny, responsywny i lekki system zarządzania sklepem dla wspólników (spółka 50/50). Umożliwia pełną kontrolę nad stanem magazynowym, kalkulacją marż, sprzedażą, kosztami operacyjnymi, równym podziałem zysku, inwestycjami oraz wspólnymi zadaniami To-Do.
 
-## 🚀 Główne funkcjonalności
+Aplikacja działa w modelu hybrydowym:
+* **Online (Vercel + GitHub Gist API)** — pełna synchronizacja danych w czasie rzeczywistym między urządzeniami wspólników z bezpieczną autoryzacją JWT.
+* **Offline / Standalone (lokalnie w przeglądarce)** — natychmiastowe działanie bez konieczności instalowania czegokolwiek (dane zapisywane w `localStorage`, fallback kryptograficzny Web Crypto API).
 
-- **🔐 System logowania i profile wspólników**:
-  - Dedykowane konta dla wspólników: **Ja** oraz **Patryk**.
-  - Zabezpieczenie kodem PIN (domyślny PIN: `1234`) z ekranową klawiaturą numeryczną i skrótem szybkiego logowania.
-  - Szybkie przełączanie profili lub wylogowanie z blokadą panelu.
+---
+
+## 🚀 Główne moduły i funkcjonalności
+
+- **🔐 Bezpieczny system logowania i profile użytkowników**:
+  - Dedykowane role: **Administrator** (pełne uprawnienia) oraz **Wspólnik / Pracownik**.
+  - Zabezpieczenie haseł zaawansowanym algorytmem PBKDF2 (SHA-512, 100 000 iteracji z unikalną solą kryptograficzną).
+  - Domyślne konto administratora: login: `admin`, hasło: `admin123` (lub własne ustawione w zmiennych środowiskowych).
+  - Możliwość tworzenia dedykowanych kont dla wspólników (np. *Ja*, *Patryk*) w panelu administratora.
   - Automatyczne przypisywanie sprzedawcy przy dodawaniu transakcji i autora w notatkach.
 
-- **📝 Notatnik i lista zadań (To-Do)**:
-  - Interaktywne checklisty (`[ ]` / `[x]`) z możliwością odhaczania zadań bezpośrednio na karcie.
-  - Kategoryzacja (*Do zrobienia*, *Ważne*, *Magazyn*, *Pomysły*, *Finanse*, *Ustalenia*).
-  - Kolorowe karty akcentowe i przypinanie kluczowych notatek na samej górze (📌).
-  - Kopiowanie treści jednym kliknięciem do schowka.
-  - Filtrowanie po tekście, kategorii i autorze.
-
 - **📊 Dashboard & Analityka**:
-  - Podsumowanie przychodów, marży, czystego zysku oraz podziału na wspólników.
-  - Interaktywny wykres sprzedaży i zysków z ostatnich 7 dni.
-  - Alerty niskiego stanu magazynowego.
+  - Podsumowanie przychodów brutto, kosztów zakupu towaru (COGS), kosztów operacyjnych i czystego zysku netto.
+  - Interaktywny wykres sprzedaży i zysków w ujęciu dziennym.
+  - Podgląd potencjalnego zysku zamrożonego w towarze na magazynie.
+  - Alerty magazynowe: natychmiastowe ostrzeżenia o brakach towaru lub niskim stanie.
 
-- **📦 Magazyn**:
-  - Rejestracja produktów, ceny zakupu, ceny sprzedaży i obliczanie marży.
-  - Szybka regulacja stanu magazynowego (+/-) i alerty o brakach.
+- **📦 Magazyn i kalkulator marży**:
+  - Ewidencja asortymentu: cena zakupu, sugerowana cena sprzedaży, marża jednostkowa (%) i całkowity zysk potencjalny.
+  - Błyskawiczne korekty stanu magazynowego (`+` / `-`).
+  - Przycisk szybkiej rejestracji sprzedaży prosto z wiersza magazynu.
+  - Filtrowanie po kategoriach oraz wyszukiwarka.
 
 - **💳 Sprzedaż**:
-  - Rejestr sprzedaży z podziałem na sprzedawców (Ja / Patryk).
-  - Automatyczne wyliczanie zysku i aktualizacja stanu magazynowego.
+  - Rejestr transakcji z przypisaniem do sprzedawcy (*Ja* / *Patryk*).
+  - Automatyczne wyliczanie zysku transakcyjnego oraz odejmowanie sprzedanych sztuk ze stanu magazynowego.
+  - Filtry po dacie, sprzedawcy oraz wyszukiwanie.
 
-- **💰 Finanse & Koszty**:
-  - Rejestr kosztów operacyjnych (marketing, opakowania, oprogramowanie, transport).
-  - Obliczanie zysku netto i kosztu towaru (COGS).
+- **💰 Finanse & Koszty operacyjne**:
+  - Rejestr wydatków (marketing, opakowania, wysyłka, oprogramowanie itp.).
+  - Bilans zysku netto wg wzoru:  
+    $$\text{Zysk netto} = \text{Przychód} - \text{COGS (koszt sprzedanych sztuk)} - \text{Koszty operacyjne}$$
 
-- **🤝 Podział Zysku (50/50)**:
-  - Równe rozliczenie zysku pomiędzy wspólników.
-  - Rejestr wypłat i zaliczek wraz z historią transakcji.
+- **🤝 Podział Zysku (50/50) & Wypłaty**:
+  - Kafelki podsumowujące: łączny zysk netto, równy udział przypadający na każdego wspólnika (50%), suma wypłaconych zaliczek oraz stan wolnych środków w kasie.
+  - Rejestr wypłat gotówki i zaliczek wraz z datą, odbiorcą i notatką.
 
-- **📈 Inwestycje**:
-  - Śledzenie wkładu finansowego w rozwój sklepu i zwrotu z inwestycji (ROI).
+- **📈 Inwestycje kapitałowe**:
+  - Ewidencja wkładu finansowego wspólników w rozwój sklepu.
+  - Śledzenie statusu inwestycji (aktywna / zakończona) oraz zwrotu z kapitału (ROI).
 
-- **📋 Historia operacji**:
-  - Pełny dziennik zdarzeń w sklepie.
+- **📝 Notatnik i checklisty To-Do**:
+  - Interaktywne checklisty zadań: wiersze zaczynające się od `[ ]` lub `[x]` stają się klikalnymi polami wyboru w czasie rzeczywistym.
+  - Kategoryzacja kolorystyczna, przypinanie ważnych notatek pinezką (📌) na samej górze oraz szybkie kopiowanie do schowka.
 
-## 💻 Uruchomienie
+- **👥 Zarządzanie użytkownikami (Panel Admina)**:
+  - Bezpieczne dodawanie i usuwanie kont dla personelu lub wspólników.
 
-1. Otwórz plik `sklep/index.html` w dowolnej przeglądarce internetowej.
-2. Zaloguj się wybierając profil **Ja** lub **Patryk** (domyślny PIN: `1234`).
+- **📋 Historia operacji (Audit Log)**:
+  - Rejestr wszystkich zdarzeń: logowania, zmiany magazynowe, transakcje, koszty, wypłaty.
+
+---
+
+## 💻 Uruchomienie lokalne (Tryb Standalone / Offline)
+
+1. Otwórz plik `index.html` bezpośrednio w dowolnej przeglądarce internetowej (Chrome, Edge, Firefox).
+2. Zaloguj się domyślnym kontem administratora:
+   * **Login:** `admin`
+   * **Hasło:** `admin123`
+3. Przejdź do zakładki **Użytkownicy** i utwórz własne konta dla wspólników (np. *Ja*, *Patryk*).
+4. Wszystkie dane są bezpiecznie zapisywane w pamięci przeglądarki (`localStorage`).
+
+---
+
+## ☁️ Wdrożenie w chmurze (Vercel + GitHub Gist)
+
+Projekt jest w 100% dostosowany do platformy **Vercel**:
+* Pliki statyczne (`index.html`, `app.js`, `style.css`) są serwowane bezpośrednio.
+* Folder `/api` zawiera funkcje Serverless Node.js obsługujące autentykację JWT oraz synchronizację bazy danych.
+
+### Konfiguracja zmiennych środowiskowych (Vercel Environment Variables):
+
+W panelu Vercela w zakładce **Settings ➔ Environment Variables** dodaj:
+
+| Zmienna | Wymagana | Opis |
+| :--- | :---: | :--- |
+| `SHOPPANEL_GH_TOKEN` | **Tak** | Twój osobisty token z GitHuba (Classic PAT z uprawnieniem `gist`). |
+| `SHOPPANEL_GIST_ID` | Opcjonalnie | ID Gista z danymi (domyślnie używany jest skonfigurowany Gist). |
+| `SHOPPANEL_SECRET` | **Tak** | Długi losowy ciąg znaków do podpisywania tokenów JWT sesji. |
+| `ADMIN_PASSWORD` | Opcjonalnie | Własne hasło dla konta `admin` (jeśli nie podasz, działa domyślne `admin123`). |
+
+> **Ważne zalecenie bezpieczeństwa:** Nigdy nie wpisuj tokenu GitHuba ani sekretów bezpośrednio do plików kodu źródłowego. Zawsze korzystaj ze zmiennych środowiskowych!
+
+---
+
+## 🚀 Wypychanie zmian na GitHub
+
+W repozytorium znajduje się ulepszony skrypt:
+* `wypchnij_na_githuba.bat` — automatycznie wykrywa instalację programu Git na komputerze, prosi o opis commita i wysyła zmiany na gałąź `main`.

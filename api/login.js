@@ -1,7 +1,6 @@
 // Vercel Serverless Function: POST /api/login
 const {
-  ADMIN_SALT,
-  ADMIN_HASH,
+  verifyAdminPassword,
   hashPassword,
   safeCompare,
   generateToken,
@@ -27,8 +26,7 @@ module.exports = async (req, res) => {
 
     // 1. Check Admin Account
     if (cleanLogin === 'admin') {
-      const computedHash = hashPassword(password, ADMIN_SALT);
-      if (safeCompare(computedHash, ADMIN_HASH)) {
+      if (verifyAdminPassword(password)) {
         const token = generateToken({
           userId: 'admin_1',
           login: 'admin',

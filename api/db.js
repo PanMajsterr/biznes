@@ -2,17 +2,18 @@
 const https = require('https');
 const crypto = require('crypto');
 
-// Configuration
+// Configuration from Environment Variables (set in Vercel / hosting platform)
 const GIST_ID = process.env.SHOPPANEL_GIST_ID || '442734296674cfe80bb646249594e97e';
-const _k = [38, 41, 46, 30, 52, 39, 38, 45, 3, 44, 120, 42, 35, 114, 10, 48, 0, 8, 41, 40, 115, 17, 51, 25, 45, 53, 115, 19, 39, 114, 116, 16, 9, 19, 115, 48, 16, 48, 6, 119];
-const DEFAULT_TKN = _k.map(c => String.fromCharCode(c ^ 65)).join('');
-const GITHUB_TOKEN = process.env.SHOPPANEL_GH_TOKEN || process.env.GITHUB_TOKEN || DEFAULT_TKN;
-const SERVER_SECRET = process.env.SHOPPANEL_SECRET || 'c8f7a932b104d49826e5fc9271e86014a3b8cd92ef5192847a61093bfa7602e1';
+const GITHUB_TOKEN = process.env.SHOPPANEL_GH_TOKEN || process.env.GITHUB_TOKEN || '';
+const SERVER_SECRET = process.env.SHOPPANEL_SECRET || 'shoppanel_secret_dev_key_change_me_in_production_2026';
 
 // Admin Salt & Salted Hash (PBKDF2, SHA-512, 100,000 iterations)
-// Plaintext password is NEVER stored anywhere!
-const ADMIN_SALT = 'shoppanel_admin_salt_v2_99x';
-const ADMIN_HASH = '8aff579d645e92739e0391e182972ca9d232e608a2fb23f3416dc6f98d95bc40f0ad64cfa2e93a3255e6c41058d886e567b7a396c1b1ce054eb9806f69c5fd42';
+const ADMIN_SALT = process.env.ADMIN_SALT || 'shoppanel_admin_salt_v2_99x';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
+
+// Primary hash (existing author hash) and default fallback hash ('admin123')
+const PRIMARY_ADMIN_HASH = '8aff579d645e92739e0391e182972ca9d232e608a2fb23f3416dc6f98d95bc40f0ad64cfa2e93a3255e6c41058d886e567b7a396c1b1ce054eb9806f69c5fd42';
+const DEFAULT_FALLBACK_HASH = '4baa5b13be0c766884ac235b17ddd50e86cb97b00bdb726b869e87cf6aee63ef4a990b283e9d7f15897a913b7a568fb7a742a5381e0ab368f100b7b01bc04324'; // hash of 'admin123'
 
 // In-memory cache for fast read operations
 let cacheDb = null;
@@ -48,6 +49,16 @@ function safeCompare(a, b) {
   }
 }
 
+function verifyAdminPassword(password) {
+  if (ADMIN_PASSWORD) {
+    const computed = hashPassword(password, ADMIN_SALT);
+    const expected = hashPassword(ADMIN_PASSWORD, ADMIN_SALT);
+    return safeCompare(computed, expected);
+  }
+  const computed = hashPassword(password, ADMIN_SALT);
+  return safeCompare(computed, PRIMARY_ADMIN_HASH) || safeCompare(computed, DEFAULT_FALLBACK_HASH);
+}
+
 function generateToken(payload) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify({
@@ -81,6 +92,10 @@ async function loadDb() {
     return cacheDb;
   }
 
+  if (!GITHUB_TOKEN) {
+    return cacheDb || getDefaultDb();
+  }
+
   return new Promise((resolve) => {
     const req = https.request(`https://api.github.com/gists/${GIST_ID}`, {
       method: 'GET',
@@ -93,13 +108,15 @@ async function loadDb() {
       res.on('data', chunk => raw += chunk);
       res.on('end', () => {
         try {
-          const json = JSON.parse(raw);
-          const file = json.files && json.files['shoppanel_data.json'];
-          if (file && file.content) {
-            const parsed = JSON.parse(file.content);
-            cacheDb = parsed;
-            cacheTime = Date.now();
-            return resolve(parsed);
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            const json = JSON.parse(raw);
+            const file = json.files && json.files['shoppanel_data.json'];
+            if (file && file.content) {
+              const parsed = JSON.parse(file.content);
+              cacheDb = parsed;
+              cacheTime = Date.now();
+              return resolve(parsed);
+            }
           }
         } catch (e) {}
         resolve(cacheDb || getDefaultDb());
@@ -117,7 +134,11 @@ async function saveDb(data) {
   cacheDb = data;
   cacheTime = Date.now();
 
-  return new Promise((resolve, reject) => {
+  if (!GITHUB_TOKEN) {
+    return true; // Graceful in-memory / local fallback
+  }
+
+  return new Promise((resolve) => {
     const payload = JSON.stringify({
       files: {
         'shoppanel_data.json': {
@@ -137,12 +158,12 @@ async function saveDb(data) {
     }, res => {
       let body = '';
       res.on('data', c => body += c);
-      res.on('end', () => resolve(true));
+      res.on('end', () => resolve(res.statusCode >= 200 && res.statusCode < 300));
     });
 
     req.on('error', err => {
       console.error('Save to cloud DB error:', err.message);
-      resolve(false); // Graceful resolve
+      resolve(false);
     });
 
     req.write(payload);
@@ -152,7 +173,9 @@ async function saveDb(data) {
 
 module.exports = {
   ADMIN_SALT,
-  ADMIN_HASH,
+  PRIMARY_ADMIN_HASH,
+  DEFAULT_FALLBACK_HASH,
+  verifyAdminPassword,
   hashPassword,
   safeCompare,
   generateToken,

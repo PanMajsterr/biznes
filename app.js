@@ -10,6 +10,7 @@ const SESSION_KEY = 'shoppanel_session_v2';
 // Fallback Salt & PBKDF2 Hash for offline/file:// protocol only
 const FALLBACK_ADMIN_SALT = 'shoppanel_admin_salt_v2_99x';
 const FALLBACK_ADMIN_HASH = '8aff579d645e92739e0391e182972ca9d232e608a2fb23f3416dc6f98d95bc40f0ad64cfa2e93a3255e6c41058d886e567b7a396c1b1ce054eb9806f69c5fd42';
+const FALLBACK_ADMIN_HASH_DEFAULT = '4baa5b13be0c766884ac235b17ddd50e86cb97b00bdb726b869e87cf6aee63ef4a990b283e9d7f15897a913b7a568fb7a742a5381e0ab368f100b7b01bc04324'; // domyślne hasło: 'admin123'
 
 let currentSession = null; // { token, user: { id, login, name, role } }
 let isSyncing = false;
@@ -359,7 +360,7 @@ async function handleLoginSubmit(e) {
     if (cleanLogin === 'admin') {
       try {
         const hash = await computeWebCryptoHash(password, FALLBACK_ADMIN_SALT);
-        if (hash === FALLBACK_ADMIN_HASH) {
+        if (hash === FALLBACK_ADMIN_HASH || hash === FALLBACK_ADMIN_HASH_DEFAULT) {
           loginSuccess = true;
           sessionData = {
             token: 'offline_token_' + uid(),
@@ -1145,6 +1146,21 @@ function deletePayout(id) {
 function renderPayouts() {
   const tbody = document.getElementById('payouts-tbody');
   const empty = document.getElementById('payouts-empty');
+
+  // Update 50/50 profit split summary cards
+  const stats = calcStats();
+  const elTotalNet = document.getElementById('split-total-net');
+  const elShare = document.getElementById('split-partner-share');
+  const elTotalPaid = document.getElementById('split-total-paid');
+  const elCount = document.getElementById('split-payouts-count');
+  const elRemaining = document.getElementById('split-remaining');
+
+  if (elTotalNet) elTotalNet.textContent = fmt(stats.totalNet);
+  if (elShare) elShare.textContent = fmt(stats.totalNet / 2);
+  if (elTotalPaid) elTotalPaid.textContent = fmt(stats.totalPaid);
+  if (elCount) elCount.textContent = `${state.payouts.length} ${state.payouts.length === 1 ? 'wypłata' : 'wypłat'}`;
+  if (elRemaining) elRemaining.textContent = fmt(stats.remainingToPayout);
+
   if (!tbody) return;
 
   const list = [...state.payouts].sort((a, b) => b.date.localeCompare(a.date));
