@@ -2,9 +2,24 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>ShopPanel — Bezpieczny Panel Sklepu</title>
   <meta name="description" content="Nowoczesny, bezpieczny panel zarządzania sklepem – magazyn, rozliczanie profitu, sprzedaż, finanse i konta użytkowników." />
+  
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#0e121c" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="ShopPanel" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png" />
+  
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -923,6 +938,45 @@
     </div>
   </div>
 </div>
+
+<!-- PWA Install Banner -->
+<div class="pwa-install-banner" id="pwa-install-banner" style="display:none;">
+  <div class="pwa-banner-content">
+    <div class="pwa-banner-icon">🛒</div>
+    <div class="pwa-banner-text">
+      <div class="pwa-banner-title">Zainstaluj ShopPanel</div>
+      <div class="pwa-banner-sub">Dodaj aplikację do ekranu głównego (PWA)</div>
+    </div>
+  </div>
+  <div class="pwa-banner-actions">
+    <button class="btn btn-sm btn-primary" id="btn-pwa-install" onclick="triggerPwaInstall()">Dodaj 📲</button>
+    <button class="btn btn-sm btn-ghost pwa-close-btn" onclick="dismissPwaBanner()">✕</button>
+  </div>
+</div>
+
+<!-- Mobile Bottom Navigation Bar -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+  <button class="mobile-nav-btn active" data-tab="dashboard" onclick="showTab('dashboard', this)">
+    <span class="m-icon">📊</span>
+    <span class="m-label">Dashboard</span>
+  </button>
+  <button class="mobile-nav-btn" data-tab="magazyn" onclick="showTab('magazyn', this)">
+    <span class="m-icon">📦</span>
+    <span class="m-label">Magazyn</span>
+  </button>
+  <button class="mobile-nav-btn" data-tab="sprzedaz" onclick="showTab('sprzedaz', this)">
+    <span class="m-icon">💳</span>
+    <span class="m-label">Sprzedaż</span>
+  </button>
+  <button class="mobile-nav-btn" data-tab="notatnik" onclick="showTab('notatnik', this)">
+    <span class="m-icon">📝</span>
+    <span class="m-label">Notatnik</span>
+  </button>
+  <button class="mobile-nav-btn" onclick="toggleSidebar()">
+    <span class="m-icon">☰</span>
+    <span class="m-label">Więcej</span>
+  </button>
+</nav>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>

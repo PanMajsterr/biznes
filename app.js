@@ -205,12 +205,16 @@ function toggleSidebar() {
 function showTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.mobile-nav-btn').forEach(el => el.classList.remove('active'));
 
   const target = document.getElementById('tab-' + name);
   if (target) target.classList.add('active');
 
-  const navBtn = btn || document.querySelector(`.nav-btn[data-tab="${name}"]`);
+  const navBtn = document.querySelector(`.nav-btn[data-tab="${name}"]`);
   if (navBtn) navBtn.classList.add('active');
+
+  const mobileBtn = document.querySelector(`.mobile-nav-btn[data-tab="${name}"]`);
+  if (mobileBtn) mobileBtn.classList.add('active');
 
   const pageTitle = document.getElementById('page-title');
   const pageSub = document.getElementById('page-subtitle');
@@ -1749,11 +1753,82 @@ function initDate() {
   if (monthEl) monthEl.value = now.toISOString().slice(0, 7);
 }
 
+// ============== PWA INSTALLATION & SERVICE WORKER ==============
+let deferredPrompt = null;
+
+function initPwa() {
+  // Register Service Worker for offline capability & PWA installability
+  if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('[PWA] Service Worker aktywny:', reg.scope))
+        .catch(err => console.warn('[PWA] Service Worker błąd:', err));
+    });
+  }
+
+  // Capture Android & Chromium beforeinstallprompt event
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const banner = document.getElementById('pwa-install-banner');
+    const dismissed = localStorage.getItem('shoppanel_pwa_dismissed');
+    if (banner && !dismissed) {
+      banner.style.display = 'flex';
+    }
+  });
+
+  // iOS Safari detection
+  const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+  const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+  if (isIos && !isInStandaloneMode) {
+    const dismissed = localStorage.getItem('shoppanel_pwa_dismissed');
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner && !dismissed) {
+      const sub = banner.querySelector('.pwa-banner-sub');
+      if (sub) sub.textContent = 'Kliknij Udostępnij (↑), a następnie "Do ekranu początkowego ➕"';
+      banner.style.display = 'flex';
+    }
+  }
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.style.display = 'none';
+    showToast('🎉 ShopPanel zainstalowany na Twoim urządzeniu!');
+  });
+}
+
+function triggerPwaInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        dismissPwaBanner();
+      }
+      deferredPrompt = null;
+    });
+  } else {
+    const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+    if (isIos) {
+      showToast('📱 W Safari kliknij ikonę Udostępnij (kwadrat ze strzałką w górę), a potem "Do ekranu początkowego"');
+    } else {
+      showToast('📱 W menu przeglądarki (⋮) wybierz "Zainstaluj aplikację" lub "Dodaj do ekranu głównego"');
+    }
+  }
+}
+
+function dismissPwaBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) banner.style.display = 'none';
+  localStorage.setItem('shoppanel_pwa_dismissed', 'true');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
   initDate();
   updateCategoryFilter();
   initAuth();
+  initPwa();
   refresh();
 
   // Resize chart on window resize

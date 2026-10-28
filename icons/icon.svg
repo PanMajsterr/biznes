@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="50%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- App Background (Squircle) -->
+  <rect width="512" height="512" rx="115" fill="url(#bgGrad)"/>
+  <rect width="504" height="504" x="4" y="4" rx="111" fill="none" stroke="rgba(255, 255, 255, 0.12)" stroke-width="4"/>
+  
+  <!-- Glowing Center Glow -->
+  <circle cx="256" cy="245" r="140" fill="url(#primaryGrad)" opacity="0.15" filter="url(#glow)"/>
+
+  <!-- Shopping Cart Icon -->
+  <g transform="translate(116, 110)">
+    <!-- Cart wheels -->
+    <circle cx="85" cy="235" r="24" fill="url(#accentGrad)" />
+    <circle cx="205" cy="235" r="24" fill="url(#accentGrad)" />
+    <circle cx="85" cy="235" r="10" fill="#0f172a" />
+    <circle cx="205" cy="235" r="10" fill="#0f172a" />
+    
+    <!-- Cart Body -->
+    <path d="M 10 30 L 48 30 L 78 175 L 225 175 L 255 70 L 60 70" 
+          fill="none" 
+          stroke="url(#primaryGrad)" 
+          stroke-width="26" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+          
+    <!-- Grid inside Cart -->
+    <path d="M 85 105 L 235 105 M 100 140 L 220 140 M 130 75 L 120 170 M 180 75 L 175 170" 
+          fill="none" 
+          stroke="rgba(255, 255, 255, 0.45)" 
+          stroke-width="10" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- Mini Profit Badge (Rising Graph Arrow) -->
+  <g transform="translate(310, 100)">
+    <circle cx="48" cy="48" r="44" fill="#0f172a" stroke="url(#accentGrad)" stroke-width="6"/>
+    <path d="M 28 62 L 44 46 L 56 56 L 70 34" fill="none" stroke="#10b981" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="58,34 70,34 70,46" fill="none" stroke="#10b981" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

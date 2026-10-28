@@ -91,6 +91,25 @@ W panelu Vercela w zakładce **Settings ➔ Environment Variables** dodaj:
 
 ---
 
+## 📱 Instalacja jako aplikacja (PWA) na iOS i Android
+
+ShopPanel jest pełnoprawną aplikacją **PWA (Progressive Web App)**. Posiada dedykowany dolny pasek nawigacyjny, obsługę Safe Area (wycięcia w ekranie iPhone'a / Dynamic Island) oraz działa w trybie pełnoekranowym bez pasków przeglądarki.
+
+### 🍏 iPhone / iPad (iOS Safari):
+1. Otwórz wdrożony panel w przeglądarce **Safari**.
+2. Kliknij ikonę **Udostępnij** (kwadrat ze strzałką w górę na dole ekranu).
+3. Przewiń w dół i wybierz **„Do ekranu początkowego”** (ikona `➕`).
+4. Zatwierdź klikając **„Dodaj”** w prawym górnym rogu.
+5. Na pulpicie pojawi się ikona **ShopPanel** – po kliknięciu uruchamia się jak natywna aplikacja bez pasków Safari!
+
+### 🤖 Android (Google Chrome / Edge):
+1. Otwórz wdrożony panel w przeglądarce **Chrome**.
+2. Kliknij wyskakujący na dole pasek **„Dodaj 📲”** lub kliknij menu z trzema kropkami (`⋮`) w prawym górnym rogu.
+3. Wybierz opcję **„Zainstaluj aplikację”** (lub **„Dodaj do ekranu głównego”**).
+4. Gotowe! Aplikacja zintegruje się z systemem Android i z szufladą aplikacji.
+
+---
+
 ## 🚀 Wypychanie zmian na GitHub
 
 W repozytorium znajduje się ulepszony skrypt:
