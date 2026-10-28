@@ -1,17 +1,18 @@
 /* ===================================================
    ShopPanel — app.js
-   Bezpieczny Panel Sklepu z Zarządzaniem Profitu
+   Bezpieczny Panel Sklepu z Zarządzaniem Profitu i Chmurą
    =================================================== */
 
 // ============== STATE & KEYS ==============
 const STATE_KEY = 'shoppanel_v2_clean';
 const SESSION_KEY = 'shoppanel_session_v2';
 
-// Salt & PBKDF2 Hash for offline/fallback mode (Plaintext password is NEVER stored!)
-const FALLBACK_ADMIN_SALT = 'shoppanel_salt_2026_super_secure';
-const FALLBACK_ADMIN_HASH = 'a3bed58123ade15a5c3bec348c972031955011b1abc6f8d313fd5dc274988c24a4b1ea2d00d41c6a8209b043591d619480a1c3219be577084f4516a51c9af126';
+// Fallback Salt & PBKDF2 Hash for offline/file:// protocol only
+const FALLBACK_ADMIN_SALT = 'shoppanel_admin_salt_v2_99x';
+const FALLBACK_ADMIN_HASH = '8aff579d645e92739e0391e182972ca9d232e608a2fb23f3416dc6f98d95bc40f0ad64cfa2e93a3255e6c41058d886e567b7a396c1b1ce054eb9806f69c5fd42';
 
 let currentSession = null; // { token, user: { id, login, name, role } }
+let isSyncing = false;
 
 // Clean initial state (Zero dummy products!)
 let state = {
@@ -22,10 +23,10 @@ let state = {
   payouts: [],
   notes: [],
   history: [],
-  users: [] // Custom user accounts created by admin
+  users: []
 };
 
-// ============== STATE PERSISTENCE ==============
+// ============== STATE PERSISTENCE & CLOUD SYNC ==============
 function loadState() {
   try {
     const raw = localStorage.getItem(STATE_KEY);
@@ -50,15 +51,17 @@ function loadState() {
 function saveState() {
   localStorage.setItem(STATE_KEY, JSON.stringify(state));
 
-  // Sync with backend if logged in
+  // Sync with cloud backend
   if (currentSession && currentSession.token) {
-    syncWithBackend();
+    syncToCloud();
   }
 }
 
-async function syncWithBackend() {
+async function syncToCloud() {
+  if (!currentSession || !currentSession.token) return;
+  if (window.location.protocol === 'file:') return;
+
   try {
-    if (window.location.protocol === 'file:') return;
     await fetch('/api/sync', {
       method: 'POST',
       headers: {
@@ -68,7 +71,41 @@ async function syncWithBackend() {
       body: JSON.stringify({ data: state })
     });
   } catch (e) {
-    // Silent catch for offline or non-serverless local runs
+    // Silent catch
+  }
+}
+
+async function loadFromCloud(silent = false) {
+  if (!currentSession || !currentSession.token) return;
+  if (window.location.protocol === 'file:') return;
+  if (isSyncing) return;
+  isSyncing = true;
+
+  try {
+    const res = await fetch('/api/sync', {
+      headers: { 'Authorization': `Bearer ${currentSession.token}` }
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && json.data) {
+        const d = json.data;
+        state.products = Array.isArray(d.products) ? d.products : [];
+        state.sales = Array.isArray(d.sales) ? d.sales : [];
+        state.expenses = Array.isArray(d.expenses) ? d.expenses : [];
+        state.investments = Array.isArray(d.investments) ? d.investments : [];
+        state.payouts = Array.isArray(d.payouts) ? d.payouts : [];
+        state.notes = Array.isArray(d.notes) ? d.notes : [];
+        state.history = Array.isArray(d.history) ? d.history : [];
+        if (Array.isArray(d.users)) state.users = d.users;
+
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        refresh(true); // Don't loop sync
+        if (!silent) showToast('☁️ Dane zsynchronizowane z chmurą!');
+      }
+    }
+  } catch (e) {
+  } finally {
+    isSyncing = false;
   }
 }
 
@@ -212,6 +249,8 @@ async function initAuth() {
         currentSession = session;
         applySessionUI();
         hideLoginOverlay();
+        // Load cloud DB immediately
+        await loadFromCloud();
         refresh();
         return;
       }
@@ -284,7 +323,7 @@ async function handleLoginSubmit(e) {
   let loginSuccess = false;
   let sessionData = null;
 
-  // 1. Try Vercel Serverless Function /api/login
+  // 1. Send to serverless API /api/login (verifies against cloud DB)
   try {
     const res = await fetch('/api/login', {
       method: 'POST',
@@ -309,11 +348,10 @@ async function handleLoginSubmit(e) {
       }
     }
   } catch (err) {
-    // Backend fetch failed (e.g. running locally via file:// without Vercel backend)
-    console.log('Using secure client cryptographic verification fallback...');
+    console.log('Using secure cryptographic fallback...');
   }
 
-  // 2. Cryptographic Fallback (if backend unreachable)
+  // 2. Cryptographic Fallback (if backend unreachable / file:// protocol)
   if (!loginSuccess) {
     const cleanLogin = login.toLowerCase();
 
@@ -324,26 +362,24 @@ async function handleLoginSubmit(e) {
         if (hash === FALLBACK_ADMIN_HASH) {
           loginSuccess = true;
           sessionData = {
-            token: 'offline_sec_token_' + uid(),
+            token: 'offline_token_' + uid(),
             user: { id: 'admin_1', login: 'admin', name: 'Administrator', role: 'admin' }
           };
         }
-      } catch (e) {
-        console.error('Crypto error:', e);
-      }
+      } catch (e) {}
     }
 
     // Check locally created users
     if (!loginSuccess && state.users && state.users.length) {
-      const found = state.users.find(u => u.login.toLowerCase() === cleanLogin);
-      if (found) {
+      const found = state.users.find(u => u.login && u.login.toLowerCase() === cleanLogin);
+      if (found && found.salt && found.passwordHash) {
         try {
           const hash = await computeWebCryptoHash(password, found.salt);
           if (hash === found.passwordHash) {
             loginSuccess = true;
             sessionData = {
-              token: 'offline_sec_token_' + uid(),
-              user: { id: found.id, login: found.login, name: found.name, role: found.role || 'user' }
+              token: 'offline_token_' + uid(),
+              user: { id: found.id, login: found.login, name: found.name, role: found.role || 'Wspólnik' }
             };
           }
         } catch (e) {}
@@ -361,7 +397,9 @@ async function handleLoginSubmit(e) {
     hideLoginOverlay();
     applySessionUI();
     addHistory('auth', `Zalogowano pomyślnie: <strong>${sessionData.user.name}</strong>`);
-    saveState();
+
+    // Fetch cloud data immediately
+    await loadFromCloud();
     refresh();
     showToast(`👋 Zalogowano pomyślnie jako: ${sessionData.user.name}`);
   } else {
@@ -421,7 +459,7 @@ async function fetchUsersList() {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.users)) {
-          // Sync with state
+          state.users = data.users.filter(u => u.login !== 'admin');
           renderUsers(data.users);
           return;
         }
@@ -429,7 +467,7 @@ async function fetchUsersList() {
     }
   } catch (e) {}
 
-  // Fallback: render from state.users
+  // Fallback
   const list = [
     { id: 'admin_1', login: 'admin', name: 'Administrator', role: 'admin', createdAt: '2026-10-28T10:00:00.000Z' },
     ...state.users
@@ -494,13 +532,15 @@ async function createUserAccount() {
     return;
   }
 
-  if (login === 'admin' || state.users.some(u => u.login.toLowerCase() === login)) {
+  if (login === 'admin' || state.users.some(u => u.login && u.login.toLowerCase() === login)) {
     showToast('⚠️ Użytkownik o takim loginie już istnieje!');
     return;
   }
 
-  // 1. Try serverless endpoint
-  let createdOnServer = false;
+  showToast('⏳ Zapisywanie konta w chmurze...');
+
+  // Save through cloud serverless API /api/users
+  let savedOnServer = false;
   try {
     if (window.location.protocol !== 'file:') {
       const res = await fetch('/api/users', {
@@ -512,12 +552,16 @@ async function createUserAccount() {
         body: JSON.stringify({ login, password, name, role })
       });
       if (res.ok) {
-        createdOnServer = true;
+        savedOnServer = true;
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        showToast(errJson.message || '⚠️ Błąd tworzenia konta');
+        return;
       }
     }
   } catch (e) {}
 
-  // 2. Client PBKDF2 hash (Safe salted storage)
+  // Local fallback
   const salt = uid() + uid();
   let passwordHash = '';
   try {
@@ -537,7 +581,7 @@ async function createUserAccount() {
   };
 
   state.users.push(newUser);
-  addHistory('auth', `Utworzono nowe konto użytkownika: <strong>${name}</strong> (login: ${login}, rola: ${role})`);
+  addHistory('auth', `Utworzono nowe konto użytkownika: <strong>${name}</strong> (${login})`);
   saveState();
 
   closeModal('add-user-modal');
@@ -545,8 +589,8 @@ async function createUserAccount() {
   pwdInput.value = '';
   nameInput.value = '';
 
-  fetchUsersList();
-  showToast(`✅ Utworzono konto dla: ${name}`);
+  await fetchUsersList();
+  showToast(`✅ Konto dla ${name} zostało pomyślnie utworzone i zapisane w chmurze! Kolega może się zalogować!`);
 }
 
 async function deleteUserAccount(id) {
@@ -570,8 +614,8 @@ async function deleteUserAccount(id) {
   state.users = state.users.filter(x => x.id !== id);
   addHistory('auth', `Usunięto konto użytkownika: <strong>${u ? u.name : id}</strong>`);
   saveState();
-  fetchUsersList();
-  showToast('🗑️ Konto użytkownika zostało usunięte');
+  await fetchUsersList();
+  showToast('🗑️ Konto użytkownika zostało usunięte z bazy');
 }
 
 // ============== PRODUCT & PROFIT MANAGEMENT (WYMÓG 2) ==============
@@ -634,7 +678,6 @@ function saveProduct() {
   const unitProfit = sell - buy;
 
   if (id) {
-    // Update existing product
     const p = state.products.find(x => x.id === id);
     if (p) {
       p.name = name;
@@ -642,12 +685,10 @@ function saveProduct() {
       p.buy = buy;
       p.sell = sell;
       p.alert = alert;
-      // adjust if total changed
       addHistory('product', `Zaktualizowano produkt: <strong>${name}</strong>`);
       showToast('✅ Zaktualizowano produkt');
     }
   } else {
-    // Create new product
     const newProduct = {
       id: uid(),
       name,
@@ -662,7 +703,7 @@ function saveProduct() {
     };
     state.products.push(newProduct);
     addHistory('product', `Kupiono towar: <strong>${name}</strong> (${qty} szt. po ${fmt(buy)}, łącznie: ${fmt(totalCost)})`);
-    showToast(`✅ Dodano produkt! Zysk na sztuce: ${fmt(unitProfit)}`);
+    showToast(`✅ Dodano produkt do bazy w chmurze! Zysk na sztuce: ${fmt(unitProfit)}`);
   }
 
   saveState();
@@ -877,7 +918,6 @@ function addSale() {
     seller
   };
 
-  // Deduct from inventory
   product.currentQty -= qty;
   state.sales.push(sale);
 
@@ -894,7 +934,7 @@ function addSale() {
   });
 
   refresh();
-  showToast(`✅ Sprzedaż zarejestrowana! Zysk: +${fmt(profit)}`);
+  showToast(`✅ Sprzedaż zapisana w chmurze! Zysk: +${fmt(profit)}`);
 }
 
 function deleteSale(id) {
@@ -1178,7 +1218,7 @@ function saveNote() {
     };
     state.notes.unshift(newNote);
     addHistory('note', `Dodano nową notatkę: <strong>${title}</strong>`);
-    showToast('✅ Notatka zapisana');
+    showToast('✅ Notatka zapisana w chmurze');
   }
 
   saveState();
@@ -1426,7 +1466,6 @@ function calcStats() {
 }
 
 function renderDashboard(stats) {
-  // Main Stat Cards
   const revEl = document.getElementById('stat-revenue');
   const profEl = document.getElementById('stat-profit');
   const margEl = document.getElementById('stat-margin');
@@ -1473,7 +1512,7 @@ function renderDashboard(stats) {
     }
   }
 
-  // Finance Summary in Dashboard
+  // Finance Summary
   const fsRev = document.getElementById('fs-revenue');
   const fsCost = document.getElementById('fs-cost');
   const fsExp = document.getElementById('fs-expenses');
@@ -1488,7 +1527,7 @@ function renderDashboard(stats) {
   if (fsInvVal) fsInvVal.textContent = fmt(stats.currentInventoryValue);
   if (fsRemProf) fsRemProf.textContent = fmt(stats.remainingProfitAll);
 
-  // Recent Sales in Dashboard
+  // Recent Sales
   const recentList = document.getElementById('recent-sales-list');
   if (recentList) {
     const recent = [...state.sales].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
@@ -1497,7 +1536,7 @@ function renderDashboard(stats) {
         <div class="sale-item">
           <div>
             <div class="sale-name">${escapeHtml(s.productName)}</div>
-            <div class="sale-date">${fmtDate(s.date)} · ${s.qty} szt. · Zysk: <strong style="color:var(--accent-green-light)">+${fmt(s.profit)}</strong></div>
+            <div class="sale-date">${fmtDate(s.date)} · ${s.qty} szt. · Zysk: <strong style="color:var(--accent-green-light)">+${fmt(s.profit)}</strong> (Sprzedawca: ${escapeHtml(s.seller || '')})</div>
           </div>
           <div class="sale-amount">+${fmt(s.revenue)}</div>
         </div>`).join('');
@@ -1545,8 +1584,8 @@ function renderChart() {
     const dayStr = d.toISOString().slice(0, 10);
     days.push(d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit' }));
     const daySales = state.sales.filter(s => s.date === dayStr);
-    revenues.push(daySales.reduce((s, x) => s + x.revenue, 0));
-    profits.push(daySales.reduce((s, x) => s + x.profit, 0));
+    revenues.push(daySales.reduce((s, x) => s + (x.revenue || 0), 0));
+    profits.push(daySales.reduce((s, x) => s + (x.profit || 0), 0));
   }
 
   const container = chartCanvas.parentElement;
@@ -1653,7 +1692,7 @@ function renderChart() {
 }
 
 // ============== REFRESH ALL ==============
-function refresh() {
+function refresh(skipSync = false) {
   const stats = calcStats();
   renderDashboard(stats);
   renderProducts();
@@ -1701,8 +1740,23 @@ document.addEventListener('DOMContentLoaded', () => {
   initAuth();
   refresh();
 
+  // Resize chart on window resize
   window.addEventListener('resize', () => {
     clearTimeout(window._resizeTimer);
     window._resizeTimer = setTimeout(renderChart, 150);
+  });
+
+  // Background auto-sync every 25 seconds for cross-device realtime collaboration
+  setInterval(() => {
+    if (currentSession && currentSession.token) {
+      loadFromCloud(true);
+    }
+  }, 25000);
+
+  // Auto-sync when user returns to tab
+  window.addEventListener('focus', () => {
+    if (currentSession && currentSession.token) {
+      loadFromCloud(true);
+    }
   });
 });

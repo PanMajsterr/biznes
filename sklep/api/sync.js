@@ -1,26 +1,9 @@
 // Vercel Serverless Function: /api/sync
-const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
-
-const SERVER_SECRET = process.env.SHOPPANEL_SECRET || 'shoppanel_secure_jwt_token_secret_2026_x99';
-const STORE_PATH = path.join('/tmp', 'shoppanel_store_data.json');
-
-function verifyToken(token) {
-  if (!token) return null;
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const [header, body, signature] = parts;
-    const expectedSig = crypto.createHmac('sha256', SERVER_SECRET).update(`${header}.${body}`).digest('base64url');
-    if (signature !== expectedSig) return null;
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
-    if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) return null;
-    return payload;
-  } catch (e) {
-    return null;
-  }
-}
+const {
+  verifyToken,
+  loadDb,
+  saveDb
+} = require('./db.js');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -35,30 +18,57 @@ module.exports = async (req, res) => {
   const user = verifyToken(token);
 
   if (!user) {
-    return res.status(401).json({ success: false, message: 'Wymagane uwierzytelnienie' });
+    return res.status(401).json({ success: false, message: 'Wymagana autoryzacja' });
   }
 
-  // GET: Read data
+  // GET: Read cloud data
   if (req.method === 'GET') {
     try {
-      if (fs.existsSync(STORE_PATH)) {
-        const raw = fs.readFileSync(STORE_PATH, 'utf8');
-        return res.status(200).json({ success: true, data: JSON.parse(raw) });
-      }
-    } catch (e) {}
-    return res.status(200).json({ success: true, data: null });
+      const db = await loadDb();
+      // Strip sensitive user fields before sending to client
+      const safeData = {
+        ...db,
+        users: (db.users || []).map(u => ({
+          id: u.id,
+          login: u.login,
+          name: u.name,
+          role: u.role,
+          createdAt: u.createdAt
+        }))
+      };
+      return res.status(200).json({ success: true, data: safeData });
+    } catch (e) {
+      return res.status(500).json({ success: false, message: 'Błąd odczytu z bazy danych' });
+    }
   }
 
-  // POST: Write data
+  // POST: Sync/Write cloud data
   if (req.method === 'POST') {
     try {
       const { data } = req.body || {};
-      if (data) {
-        fs.writeFileSync(STORE_PATH, JSON.stringify(data), 'utf8');
+      if (!data) {
+        return res.status(400).json({ success: false, message: 'Brak danych do zapisu' });
       }
-      return res.status(200).json({ success: true, message: 'Dane zsynchronizowane' });
+
+      const currentDb = await loadDb();
+
+      // Safely merge data: keep user accounts preserved
+      const updatedDb = {
+        version: 2,
+        users: currentDb.users || [], // User accounts are managed via /api/users
+        products: Array.isArray(data.products) ? data.products : (currentDb.products || []),
+        sales: Array.isArray(data.sales) ? data.sales : (currentDb.sales || []),
+        expenses: Array.isArray(data.expenses) ? data.expenses : (currentDb.expenses || []),
+        investments: Array.isArray(data.investments) ? data.investments : (currentDb.investments || []),
+        payouts: Array.isArray(data.payouts) ? data.payouts : (currentDb.payouts || []),
+        notes: Array.isArray(data.notes) ? data.notes : (currentDb.notes || []),
+        history: Array.isArray(data.history) ? data.history : (currentDb.history || [])
+      };
+
+      await saveDb(updatedDb);
+      return res.status(200).json({ success: true, message: 'Dane pomyślnie zsynchronizowane w chmurze' });
     } catch (e) {
-      return res.status(500).json({ success: false, message: 'Błąd zapisu danych' });
+      return res.status(500).json({ success: false, message: 'Błąd zapisu do bazy danych' });
     }
   }
 
