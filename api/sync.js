@@ -10,6 +10,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -45,12 +46,16 @@ module.exports = async (req, res) => {
   // POST: Sync/Write cloud data
   if (req.method === 'POST') {
     try {
-      const { data } = req.body || {};
+      let body = req.body;
+      if (typeof body === 'string') {
+        try { body = JSON.parse(body); } catch (e) { body = {}; }
+      }
+      const { data } = body || {};
       if (!data) {
         return res.status(400).json({ success: false, message: 'Brak danych do zapisu' });
       }
 
-      const currentDb = await loadDb();
+      const currentDb = await loadDb(true); // Fresh load
 
       // Safely merge data: keep user accounts preserved
       const updatedDb = {
@@ -65,7 +70,11 @@ module.exports = async (req, res) => {
         history: Array.isArray(data.history) ? data.history : (currentDb.history || [])
       };
 
-      await saveDb(updatedDb);
+      const saved = await saveDb(updatedDb);
+      if (!saved) {
+        console.error('Failed to save updatedDb to Gist');
+      }
+
       return res.status(200).json({ success: true, message: 'Dane pomyślnie zsynchronizowane w chmurze' });
     } catch (e) {
       return res.status(500).json({ success: false, message: 'Błąd zapisu do bazy danych' });

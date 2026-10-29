@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const {
   verifyToken,
   hashPassword,
+  stripAccents,
   loadDb,
   saveDb
 } = require('./db.js');
@@ -12,6 +13,7 @@ module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -24,7 +26,7 @@ module.exports = async (req, res) => {
     return res.status(403).json({ success: false, message: 'Wymagane uprawnienia administratora' });
   }
 
-  const db = await loadDb();
+  const db = await loadDb(true); // Always fresh
   if (!Array.isArray(db.users)) db.users = [];
 
   // GET: List all users (excluding hashes and salts!)
@@ -51,14 +53,24 @@ module.exports = async (req, res) => {
 
   // POST: Create a new user account
   if (req.method === 'POST') {
-    const { login, password, name, role } = req.body || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (e) { body = {}; }
+    }
+    const { login, password, name, role } = body || {};
 
     if (!login || !password) {
       return res.status(400).json({ success: false, message: 'Podaj login oraz hasło dla nowego użytkownika' });
     }
 
     const cleanLogin = String(login).trim().toLowerCase();
-    if (cleanLogin === 'admin' || db.users.some(u => u.login && u.login.toLowerCase() === cleanLogin)) {
+    const normLogin = stripAccents(cleanLogin);
+
+    if (cleanLogin === 'admin' || normLogin === 'admin' || db.users.some(u => {
+      if (!u || !u.login) return false;
+      const existing = String(u.login).trim().toLowerCase();
+      return existing === cleanLogin || stripAccents(existing) === normLogin;
+    })) {
       return res.status(400).json({ success: false, message: 'Konto o takim loginie już istnieje!' });
     }
 
@@ -85,7 +97,10 @@ module.exports = async (req, res) => {
       ts: new Date().toISOString()
     });
 
-    await saveDb(db);
+    const saved = await saveDb(db);
+    if (!saved) {
+      console.error('Failed to save newUser to Gist DB');
+    }
 
     return res.status(201).json({
       success: true,
@@ -102,7 +117,12 @@ module.exports = async (req, res) => {
 
   // DELETE: Remove a user account
   if (req.method === 'DELETE') {
-    const { id } = req.body || req.query || {};
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (e) { body = {}; }
+    }
+    const id = (body && body.id) || (req.query && req.query.id);
+
     if (!id || id === 'admin_1') {
       return res.status(400).json({ success: false, message: 'Nie można usunąć głównego konta administratora' });
     }

@@ -279,6 +279,40 @@ function hideLoginOverlay() {
   if (overlay) overlay.classList.add('hidden');
 }
 
+// Helper: Strip Polish accents for flexible matching
+function stripAccentsClient(str) {
+  return String(str || '')
+    .trim()
+    .toLowerCase()
+    .replace(/ł/g, 'l')
+    .replace(/Ł/g, 'l')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function getLocalOfflineCreds() {
+  try {
+    return JSON.parse(localStorage.getItem('shoppanel_offline_creds_v2') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveLocalOfflineCred(userObj) {
+  if (!userObj || !userObj.login) return;
+  try {
+    const creds = getLocalOfflineCreds();
+    const lk = userObj.login.toLowerCase();
+    creds[lk] = userObj;
+    if (userObj.name) {
+      creds[userObj.name.toLowerCase()] = userObj;
+    }
+    const stripped = stripAccentsClient(userObj.login);
+    if (stripped) creds[stripped] = userObj;
+    localStorage.setItem('shoppanel_offline_creds_v2', JSON.stringify(creds));
+  } catch (e) {}
+}
+
 // Helper: PBKDF2 hash using Web Crypto API for client-side fallback
 async function computeWebCryptoHash(password, salt) {
   const enc = new TextEncoder();
@@ -312,10 +346,10 @@ async function handleLoginSubmit(e) {
   const errorBanner = document.getElementById('login-error-banner');
   const submitBtn = document.getElementById('btn-login-submit');
 
-  const login = loginInput.value.trim();
+  const rawLogin = loginInput.value.trim();
   const password = passwordInput.value;
 
-  if (!login || !password) {
+  if (!rawLogin || !password) {
     errorBanner.textContent = 'Wprowadź login oraz hasło.';
     errorBanner.style.display = 'block';
     return;
@@ -327,41 +361,39 @@ async function handleLoginSubmit(e) {
 
   let loginSuccess = false;
   let sessionData = null;
+  let serverErrorMessage = '';
 
   // 1. Send to serverless API /api/login (verifies against cloud DB)
   try {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password })
-    });
+    if (window.location.protocol !== 'file:') {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login: rawLogin, password })
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.token) {
-        loginSuccess = true;
-        sessionData = data;
-      }
-    } else {
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401) {
-        errorBanner.textContent = data.message || 'Nieprawidłowy login lub hasło!';
-        errorBanner.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.token) {
+          loginSuccess = true;
+          sessionData = data;
+        }
+      } else {
+        const data = await res.json().catch(() => ({}));
+        serverErrorMessage = data.message || '';
       }
     }
   } catch (err) {
     console.log('Using secure cryptographic fallback...');
   }
 
-  // 2. Cryptographic Fallback (if backend unreachable / file:// protocol)
+  // 2. Cryptographic Fallback (if backend unreachable / file:// protocol / offline account)
   if (!loginSuccess) {
-    const cleanLogin = login.toLowerCase();
+    const cleanLogin = rawLogin.toLowerCase();
+    const normLogin = stripAccentsClient(cleanLogin);
 
     // Check Admin fallback hash
-    if (cleanLogin === 'admin') {
+    if (cleanLogin === 'admin' || normLogin === 'admin') {
       try {
         const hash = await computeWebCryptoHash(password, FALLBACK_ADMIN_SALT);
         if (hash === FALLBACK_ADMIN_HASH || hash === FALLBACK_ADMIN_HASH_DEFAULT) {
@@ -374,9 +406,18 @@ async function handleLoginSubmit(e) {
       } catch (e) {}
     }
 
-    // Check locally created users
-    if (!loginSuccess && state.users && state.users.length) {
-      const found = state.users.find(u => u.login && u.login.toLowerCase() === cleanLogin);
+    // Check offline credentials stored locally
+    if (!loginSuccess) {
+      const offlineCreds = getLocalOfflineCreds();
+      const found = offlineCreds[cleanLogin] || 
+                    offlineCreds[normLogin] || 
+                    Object.values(offlineCreds).find(u => {
+                      if (!u) return false;
+                      const ul = String(u.login || '').toLowerCase();
+                      const un = String(u.name || '').toLowerCase();
+                      return ul === cleanLogin || un === cleanLogin || stripAccentsClient(ul) === normLogin || stripAccentsClient(un) === normLogin;
+                    });
+
       if (found && found.salt && found.passwordHash) {
         try {
           const hash = await computeWebCryptoHash(password, found.salt);
@@ -408,7 +449,7 @@ async function handleLoginSubmit(e) {
     refresh();
     showToast(`👋 Zalogowano pomyślnie jako: ${sessionData.user.name}`);
   } else {
-    errorBanner.textContent = '❌ Nieprawidłowy login lub hasło!';
+    errorBanner.textContent = serverErrorMessage || '❌ Nieprawidłowy login lub hasło!';
     errorBanner.style.display = 'block';
   }
 }
@@ -527,17 +568,23 @@ async function createUserAccount() {
   const nameInput = document.getElementById('u-name');
   const roleInput = document.getElementById('u-role');
 
-  const login = loginInput.value.trim().toLowerCase();
+  const rawLogin = loginInput.value.trim();
+  const login = rawLogin.toLowerCase();
   const password = pwdInput.value;
-  const name = nameInput.value.trim() || login;
+  const name = nameInput.value.trim() || rawLogin;
   const role = roleInput.value;
 
-  if (!login || !password) {
+  if (!rawLogin || !password) {
     showToast('⚠️ Podaj login oraz hasło dla nowego użytkownika');
     return;
   }
 
-  if (login === 'admin' || state.users.some(u => u.login && u.login.toLowerCase() === login)) {
+  const normLogin = stripAccentsClient(login);
+  if (login === 'admin' || normLogin === 'admin' || state.users.some(u => {
+    if (!u || !u.login) return false;
+    const ul = u.login.toLowerCase();
+    return ul === login || stripAccentsClient(ul) === normLogin;
+  })) {
     showToast('⚠️ Użytkownik o takim loginie już istnieje!');
     return;
   }
@@ -545,7 +592,7 @@ async function createUserAccount() {
   showToast('⏳ Zapisywanie konta w chmurze...');
 
   // Save through cloud serverless API /api/users
-  let savedOnServer = false;
+  let savedUser = null;
   try {
     if (window.location.protocol !== 'file:') {
       const res = await fetch('/api/users', {
@@ -554,39 +601,38 @@ async function createUserAccount() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${currentSession.token}`
         },
-        body: JSON.stringify({ login, password, name, role })
+        body: JSON.stringify({ login: rawLogin, password, name, role })
       });
       if (res.ok) {
-        savedOnServer = true;
+        const json = await res.json().catch(() => ({}));
+        if (json.success && json.user) {
+          savedUser = json.user;
+        }
       } else {
         const errJson = await res.json().catch(() => ({}));
         showToast(errJson.message || '⚠️ Błąd tworzenia konta');
         return;
       }
     }
-  } catch (e) {}
-
-  // Local fallback
-  const salt = uid() + uid();
-  let passwordHash = '';
-  try {
-    passwordHash = await computeWebCryptoHash(password, salt);
   } catch (e) {
-    passwordHash = uid();
+    console.warn('API error during user creation:', e);
   }
 
-  const newUser = {
-    id: 'usr_' + uid(),
-    login,
-    name,
-    role,
-    salt,
-    passwordHash,
-    createdAt: new Date().toISOString()
-  };
+  // Save offline credentials
+  try {
+    const salt = uid() + uid();
+    const passwordHash = await computeWebCryptoHash(password, salt);
+    saveLocalOfflineCred({
+      id: (savedUser && savedUser.id) || ('usr_' + uid()),
+      login: rawLogin,
+      name,
+      role,
+      salt,
+      passwordHash
+    });
+  } catch (e) {}
 
-  state.users.push(newUser);
-  addHistory('auth', `Utworzono nowe konto użytkownika: <strong>${name}</strong> (${login})`);
+  addHistory('auth', `Utworzono nowe konto użytkownika: <strong>${name}</strong> (${rawLogin})`);
   saveState();
 
   closeModal('add-user-modal');
@@ -595,7 +641,7 @@ async function createUserAccount() {
   nameInput.value = '';
 
   await fetchUsersList();
-  showToast(`✅ Konto dla ${name} zostało pomyślnie utworzone i zapisane w chmurze! Kolega może się zalogować!`);
+  showToast(`✅ Konto dla "${name}" zostało utworzone i zapisane w chmurze! Można się już logować!`);
 }
 
 async function deleteUserAccount(id) {
