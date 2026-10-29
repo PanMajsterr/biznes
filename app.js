@@ -1,3 +1,15 @@
+// Native Haptic Feedback for Mobile Devices (Trading App Feel)
+function triggerHaptic(type = 'light') {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      if (type === 'light') navigator.vibrate(8);
+      else if (type === 'medium') navigator.vibrate(16);
+      else if (type === 'success') navigator.vibrate([10, 30, 15]);
+      else if (type === 'error') navigator.vibrate([30, 50, 30]);
+    } catch (e) {}
+  }
+}
+
 /* ===================================================
    ShopPanel — app.js
    Bezpieczny Panel Sklepu z Zarządzaniem Profitu i Chmurą
@@ -176,11 +188,13 @@ function showToast(msg) {
 }
 
 function openModal(id) {
+  triggerHaptic("medium");
   const el = document.getElementById(id);
   if (el) el.classList.add('open');
 }
 
 function closeModal(id) {
+  triggerHaptic("light");
   const el = document.getElementById(id);
   if (el) el.classList.remove('open');
 }
@@ -203,6 +217,7 @@ function toggleSidebar() {
 }
 
 function showTab(name, btn) {
+  triggerHaptic("light");
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.mobile-nav-btn').forEach(el => el.classList.remove('active'));

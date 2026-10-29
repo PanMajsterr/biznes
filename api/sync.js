@@ -1,16 +1,13 @@
 // Vercel Serverless Function: /api/sync
 const {
   verifyToken,
+  applySecurityHeaders,
   loadDb,
   saveDb
 } = require('./db.js');
 
 module.exports = async (req, res) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  applySecurityHeaders(req, res);
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -67,7 +64,7 @@ module.exports = async (req, res) => {
         investments: Array.isArray(data.investments) ? data.investments : (currentDb.investments || []),
         payouts: Array.isArray(data.payouts) ? data.payouts : (currentDb.payouts || []),
         notes: Array.isArray(data.notes) ? data.notes : (currentDb.notes || []),
-        history: Array.isArray(data.history) ? data.history : (currentDb.history || [])
+        history: Array.isArray(data.history) ? data.history.slice(0, 300) : (currentDb.history || [])
       };
 
       const saved = await saveDb(updatedDb);

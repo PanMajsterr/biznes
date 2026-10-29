@@ -2,12 +2,12 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>ShopPanel — Bezpieczny Panel Sklepu</title>
   <meta name="description" content="Nowoczesny, bezpieczny panel zarządzania sklepem – magazyn, rozliczanie profitu, sprzedaż, finanse i konta użytkowników." />
   
   <!-- PWA & Mobile Web App Meta Tags -->
-  <meta name="theme-color" content="#0e121c" />
+  <meta name="theme-color" content="#080b11" />
   <meta name="color-scheme" content="dark" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,7 +22,7 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -684,6 +684,7 @@
 <!-- Add Sale Modal (Z odliczaniem profitu!) -->
 <div class="modal-overlay" id="add-sale-modal">
   <div class="modal">
+    <div class="modal-sheet-handle"></div>
     <div class="modal-header">
       <h3>💳 Dodaj sprzedaż i rozlicz profit</h3>
       <button class="modal-close" onclick="closeModal('add-sale-modal')">✕</button>
@@ -734,6 +735,7 @@
 <!-- Add User Modal (Admin only) -->
 <div class="modal-overlay" id="add-user-modal">
   <div class="modal">
+    <div class="modal-sheet-handle"></div>
     <div class="modal-header">
       <h3>👥 Utwórz nowe konto użytkownika</h3>
       <button class="modal-close" onclick="closeModal('add-user-modal')">✕</button>
@@ -776,6 +778,7 @@
 <!-- Add Expense Modal -->
 <div class="modal-overlay" id="add-expense-modal">
   <div class="modal">
+    <div class="modal-sheet-handle"></div>
     <div class="modal-header">
       <h3>📝 Dodaj koszt operacyjny</h3>
       <button class="modal-close" onclick="closeModal('add-expense-modal')">✕</button>
@@ -816,6 +819,7 @@
 <!-- Add Investment Modal -->
 <div class="modal-overlay" id="add-investment-modal">
   <div class="modal">
+    <div class="modal-sheet-handle"></div>
     <div class="modal-header">
       <h3>📈 Dodaj inwestycję</h3>
       <button class="modal-close" onclick="closeModal('add-investment-modal')">✕</button>
@@ -908,6 +912,7 @@
 <!-- Payout Modal -->
 <div class="modal-overlay" id="payout-modal">
   <div class="modal">
+    <div class="modal-sheet-handle"></div>
     <div class="modal-header">
       <h3>💸 Zarejestruj wypłatę</h3>
       <button class="modal-close" onclick="closeModal('payout-modal')">✕</button>

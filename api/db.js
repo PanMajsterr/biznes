@@ -51,6 +51,28 @@ function stripAccents(str) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+function sanitizeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function applySecurityHeaders(req, res) {
+  const origin = req.headers && req.headers.origin ? req.headers.origin : '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+}
+
 function hashPassword(password, salt) {
   return crypto.pbkdf2Sync(String(password), String(salt), 100000, 64, 'sha512').toString('hex');
 }
@@ -87,17 +109,15 @@ function generateToken(payload) {
   return `${header}.${body}.${signature}`;
 }
 
+// Strictly verify HMAC-SHA256 tokens signed by SERVER_SECRET (or valid legacy keys)
 function verifyToken(token) {
-  if (!token) return null;
+  if (!token || typeof token !== 'string') return null;
   try {
-    if (token.startsWith('offline_token_')) {
-      return { userId: 'admin_1', login: 'admin', name: 'Administrator', role: 'admin' };
-    }
     const parts = token.split('.');
     if (parts.length !== 3) return null;
     const [header, body, signature] = parts;
 
-    // Support current key and legacy keys
+    // Support current key and valid legacy keys during rotation
     const sig1 = crypto.createHmac('sha256', SERVER_SECRET).update(`${header}.${body}`).digest('base64url');
     const sig2 = crypto.createHmac('sha256', 'c8f7a932b104d49826e5fc9271e86014a3b8cd92ef5192847a61093bfa7602e1').update(`${header}.${body}`).digest('base64url');
     const sig3 = crypto.createHmac('sha256', 'shoppanel_secret_dev_key_change_me_in_production_2026').update(`${header}.${body}`).digest('base64url');
@@ -227,6 +247,8 @@ module.exports = {
   hashPassword,
   safeCompare,
   stripAccents,
+  sanitizeHtml,
+  applySecurityHeaders,
   generateToken,
   verifyToken,
   loadDb,
